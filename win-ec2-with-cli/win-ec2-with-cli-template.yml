@@ -1,0 +1,132 @@
+AWSTemplateFormatVersion: '2010-09-09'
+Description: CloudFormation template to create an RHEL EC2 instance with Git, Jenkins, and Docker pre-installed.
+
+Parameters:
+  UAI:
+    Type: String
+    Description: Name of the application
+    MaxLength: 10
+  AppName:
+    Type: String
+    Description: Name of the application
+    MaxLength: 10
+  AppInstance:
+    Type: String
+    Description: Name of the application
+    MaxLength: 10
+  Env:
+    Type: String
+    Description: Environment of the application
+    AllowedValues:
+      - dev
+      - qa
+      - stg
+      - prd
+  ImageId:
+    Type: 'AWS::SSM::Parameter::Value<AWS::EC2::Image::Id>'
+  RootVolSize:
+    Type: Number
+    Description: Size of the disk (GB)
+    Default: 50 
+  EC2InstanceProfile:
+    Type: String
+    Description: Instance profile for server (only name no ARN or Path)
+    Default: ''
+  EC2Type:
+    Type: String
+    Description: Type of Instance
+    AllowedValues:
+      - t3.medium
+      - t2.large
+      - t3.large
+      - m5.large
+      #keep as many as you want
+Resources:
+  myASG:
+    Type: AWS::AutoScaling::AutoScalingGroup
+    Properties:
+      LaunchTemplate:
+        LaunchTemplateId: !Ref myLaunchTemplate
+        Version: !GetAtt 
+          - myLaunchTemplate
+          - LatestVersionNumber
+      MaxSize: '1'
+      MinSize: '1'
+      DesiredCapacity: '1'
+      HealthCheckType: EC2
+      HealthCheckGracePeriod: '300'
+
+      VPCZoneIdentifier: !Ref Subnets
+      LifecycleHookSpecificationList:
+        - DefaultResult: CONTINUE
+          HeartbeatTimeout: '300'
+          LifecycleHookName: myLifecycleHook
+          LifecycleTransition: autoscaling:EC2_INSTANCE_LAUNCHING
+      Tags:
+        - Key: Name
+          Value: !Sub '${AppName}-${AppInstance}-${Env}'
+          PropagateAtLaunch: 'true'
+        - Key: UAI
+          Value: !Ref UAI
+          PropagateAtLaunch: 'true'
+        - Key: AppName
+          Value: !Ref AppName
+          PropagateAtLaunch: 'true'
+        - Key: AppInstance
+          Value: !Ref AppInstance
+          PropagateAtLaunch: 'true'
+        - Key: Env
+          Value: !Ref Env
+          PropagateAtLaunch: 'true'
+  myLaunchTemplate:
+    Type: AWS::EC2::LaunchTemplate
+    Properties: 
+      LaunchTemplateName: !Sub ${AWS::StackName}-launch-template
+      LaunchTemplateData:
+        ImageId: !Ref LatestAmiId
+        InstanceType: !Ref InstanceType
+        KeyName: !Ref KeyName
+        DisableApiTermination: 'true'
+        IamInstanceProfile: !Ref EC2InstanceProfile
+        SecurityGroupIds: !Ref SecurityGroup
+        BlockDeviceMappings:
+          - DeviceName: /dev/xvda
+            Ebs:
+              VolumeSize: !Ref RootVolSize
+              VolumeType: gp3
+          - DeviceName: xvdf
+            Ebs:
+              VolumeSize: '10'
+              VolumeType: gp3
+              KmsKeyId: !Ref KmsKeyId
+        UserData:
+          Fn::Base64: !Sub |
+          <powershell>
+          $name = "awscli-installation - " + (Get-Date -Format "yyyyMMddHHmmss")
+          Start-Trancript -Path "C:\temp\logs\$name.log"
+          $PackageName = get-package -Name "AWS Command Line Interface"
+          if ($PackageName.Name -ne "AWS Command Line Interface") {
+            $try = 1
+            Do {
+              Write-Host $try 'AWS Command Line Interface setup starts' (Get-Date -Format "yyyyMMddHHmmss")
+              $dlurl = "https://s3.amazonaws.com/aws-cli/AWSCLI64PY3.msi"
+              $installerPath = Join-Path $env:TEMP (Split-Path $dlurl -Leaf)
+              $ProgressPreference = 'SilentlyContinue'
+              Invoke-WebRequest -Uri $dlurl -OutFile $installerPath
+              Start-Process -FilePath msiexec -Args "/i $installerPath /quiet" -verb RunAs -Wait -PassThru
+              Remove-Item $installerPath
+              $env:Path += ";C:\Program Files\Amazon\AWSCLI\bin"
+              write-host ----$try 'AWS Command Line Interface setup completed' (Get-Date -Format "yyyyMMddHHmmss")
+              Start-Sleep -Seconds 5
+              $try++
+              $PackageName = get-package -Name "AWS Command Line Interface"
+            } Until ($PackageName.Name -eq "AWS Command Line Interface" -or $try -eq 4)
+            Clear-Variable -Name try
+          }
+          else {
+            Write-Host 'AWS Command Line Interface is already installed'
+            aws s3 cp s3://mybucket/myfile.txt C:\temp
+            Stop-Transcript
+            }
+          </powershell>
+  

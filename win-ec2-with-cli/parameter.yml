@@ -1,0 +1,9 @@
+UAI: uai3031404
+AppName: rpa
+AppInstance: app
+Env: dev
+ImageId: /ami/windows2019
+RootVolSize: 50
+EC2InstanceProfile: "arn:aws:iam::123456789012:instance-profile/EC2InstanceProfile"
+EC2Type: t3.medium
+# End of snippet

@@ -1,0 +1,117 @@
+AWSTemplateFormatVersion: 2010-09-09
+Description: Template for Lambda.
+Parameters:
+  UAI:
+    Type: String
+    Description: Name of the application
+    MaxLength: 10
+  AppName:
+    Type: String
+    Description: Name of the application
+    MaxLength: 10
+  AppInstance:
+    Type: String
+    Description: Name of the application
+    MaxLength: 10
+  Env:
+    Type: String
+    Description: Environment of the application
+    AllowedValues:
+      - dev
+      - qa
+      - stg
+      - prd
+  LambdaName:
+    Type: String
+    Description: "App Instance for ex: app, web"
+  LambdaHandlerPath:
+    Type: String
+    Description: Path of a Lambda Handler.
+    AllowedPattern: "^.*[^0-9]$"
+    ConstraintDescription: Must end with non-numeric character.
+  LambdaRole:
+    Type: String
+    Description: Lambda role ARN
+  LambdaBucket:
+    Type: String
+    Description: Kms Key Arn value to encrypt the volume
+  Runtime:
+    Type: String
+    Description: Runtime of script
+  LambdaFunctionDescription:
+    Type: String
+    Description: Description of the lambda function
+  LayerARN:
+    Type: String
+    Description: ARN for the layer
+
+Resources:
+  LambdaFunction:
+    Type: "AWS::Lambda::Function"
+    Properties:
+      FunctionName: !Sub "${UAI}-${Env}-${AppName}-${AppInstance}-lambda-${LambdaName}"
+      Description: !Ref LambdaFunctionDescription
+      Runtime: !Ref Runtime
+      Handler: !Ref LambdaHandlerPath
+      MemorySize: 10240
+      Role: !Ref LambdaRole
+      Timeout: 900
+      Code:
+        S3Bucket: !Ref LambdaBucket
+        S3Key: script/transform_incident.zip
+      Layers:
+        - !Ref LayerARN
+
+      Tags:
+        - Key: Name
+          Value: !Sub "${UAI}-${AppName}-${AppInstance}-${Env}-lambda-${LambdaName}"
+        - Key: associate
+          Value: sa
+        - Key: uai
+          Value:
+            Ref: UAI
+        - Key: env
+          Value:
+            Ref: Env
+        - Key: role
+          Value:
+            Ref: AppInstance
+
+  lambdaLogGroup:
+    Type: "AWS::Logs::LogGroup"
+    Properties:
+      LogGroupName: !Sub "/aws/lambda/${LambdaFunction}"
+      RetentionInDays: 30
+      Tags:
+        - Key: Name
+          Value: !Sub "${UAI}-${AppName}-${Env}-lambda-${LambdaName}"
+        - Key: associate
+          Value: sa
+        - Key: uai
+          Value:
+            Ref: UAI
+        - Key: env
+          Value:
+            Ref: Env
+    #lambdaLayer:
+    #  Type: AWS::Lambda::LayerVersion
+    #  Properties:
+    #    CompatibleRuntimes:
+    #       - python3.9
+    #       - python3.8
+    #    Content:
+    #        S3Bucket: uai3031404-skynet-dev-s3-layer
+    #        S3Key: libraries.zip
+    #      LayerName: !Sub '${UAI}-${AppName}-${AppInstance}-${Env}-layer'
+
+Outputs:
+  LambdaFunctionName:
+    Value:
+      Ref: LambdaFunction
+  LambdaFunctionARN:
+    Description: Lambda function ARN.
+    Value:
+      "Fn::GetAtt":
+        - LambdaFunction
+        - Arn
+# Test

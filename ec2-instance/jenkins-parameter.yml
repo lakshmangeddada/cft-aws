@@ -1,0 +1,5 @@
+UAI: uai3031404
+AppName: rpa
+AppInstance: app
+Env: dev
+ImageId: /ami/windows2019

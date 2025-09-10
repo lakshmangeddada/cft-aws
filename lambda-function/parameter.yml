@@ -3,7 +3,7 @@ AppName: rpa
 AppInstance: app
 Env: dev
 LambdaName: example-lambda
-LambdaHandlerPath:lambda_handler.py
+LambdaHandlerPath: lambda_handler.py
 LambdaRole: <role arn>
 LambdaBucket: <s3 bucket name>
 Runtime: <python 3.9 or nodejs>

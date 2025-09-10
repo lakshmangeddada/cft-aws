@@ -1,5 +1,7 @@
 UAI: uai3031404
-AppName: rpa
-AppInstance: app
+AppName: genai
 Env: dev
 RoleName: test-role
+KMSkeyId: <kms key arn>
+DBTableName1: <dynamodb table name>
+DBTableName2: <dynamodb table name>

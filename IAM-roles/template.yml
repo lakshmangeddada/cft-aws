@@ -1,0 +1,81 @@
+AWSTemplateFormatVersion: '2010-09-09'
+Description: CloudFormation template to create an IAM role with specific policies.
+
+Parameters:
+  UAI:
+    Type: String
+    Description: Unique Application Identifier
+    MaxLength: 10
+  AppName:
+    Type: String
+    Description: Name of the application
+    MaxLength: 10
+  Env:
+    Type: String
+    Description: Environment of the application
+    AllowedValues:
+      - dev
+      - qa
+      - stg
+      - prd
+  RoleName:
+    Type: String
+    Description: Name of the IAM Role to be created
+    MaxLength: 64
+  KMSkeyId:
+    Type: String
+    Description: KMS Key ARN for encryption/decryption operations
+  DBTableName1:
+    Type: String
+    Description: Name of the first DynamoDB table
+  DBTableName2:
+    Type: String
+    Description: Name of the second DynamoDB table
+
+Resources:
+  IAMRoleBackend:
+    Type: AWS::IAM::Role
+    Properties:
+      RoleName: !Sub '${UAI}-${AppName}-${Env}-${RoleName}'
+      AssumeRolePolicyDocument:
+        Statement:
+          - Effect: Allow
+            Principal:
+              Service:
+                - lambda.amazonaws.com
+            Action:
+              - sts:AssumeRole
+      Path: /
+      ManagedPolicyArns:
+        - arn:aws:iam::aws:policy/service-role/AWSLambdaBasicExecutionRole
+        - arn:aws:iam::aws:policy/AmazonS3FullAccess
+        - arn:aws:iam::aws:policy/AmazonDynamoDBFullAccess
+        
+      Policies:
+        - PolicyName: !Sub '${UAI}-${AppName}-${Env}-CustomPolicy'
+          PolicyDocument:
+            Statement:
+              - Effect: Allow
+                Action:
+                  - kms:Decrypt
+                  - kms:Encrypt
+                  - kms:GenerateDataKey
+                Resource: !Ref KMSkeyId
+              - Effect: Allow
+                Action:
+                  - dynamodb:PutItem
+                  - dynamodb:GetItem
+                  - dynamodb:UpdateItem
+                  - dynamodb:DeleteItem
+                  - dynamodb:Scan
+                  - dynamodb:Query
+                Resource:
+                  - !Sub 'arn:aws:dynamodb:${AWS::Region}:${AWS::AccountId}:table/${DBTableName1}'
+                  - !Sub 'arn:aws:dynamodb:${AWS::Region}:${AWS::AccountId}:table/${DBTableName2}'
+      Tags:
+        - Key: UAI
+          Value: !Ref UAI
+        - Key: AppName
+          Value: !Ref AppName
+        - Key: Env
+          Value: !Ref Env

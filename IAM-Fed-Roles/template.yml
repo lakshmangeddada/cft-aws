@@ -1,0 +1,114 @@
+#Create a federated role with trust relationship to an external identity provider (IdP) like SAML or OIDC.
+#This role can be assumed by users authenticated via the external IdP, allowing them to access AWS resources based on the defined permissions.
+Parameters:
+  UAI:
+    Type: String
+    Description: Unique Application Identifier
+    MaxLength: 10
+  AppName:
+    Type: String
+    Description: Name of the application
+    MaxLength: 10
+  Env:
+    Type: String
+    Description: Environment of the application
+    AllowedValues:
+      - dev
+      - qa
+      - stg
+      - prd
+  RoleName:
+    Type: String
+    Description: Name of the IAM Role to be created
+    MaxLength: 64
+Resources:
+  IAMFedRole:
+    Type: AWS::IAM::Role
+    Properties:
+      RoleName: !Sub '${UAI}-${AppName}-${Env}-${RoleName}'
+      AssumeRolePolicyDocument:
+        Statement:
+          - Effect: Allow
+            Principal:
+              Federated:
+                - arn:aws:iam::123456789012:saml-provider/YourSAMLProvider
+                # Replace with your actual SAML provider ARN
+            Action:
+              - sts:AssumeRoleWithSAML
+            Condition:
+              StringEquals:
+                SAML:aud: https://signin.aws.amazon.com/saml # Adjust based on your IdP's requirements
+      ManagedPolicyArns:
+        - arn:aws:iam::aws:policy/ReadOnlyAccess
+        # Add other managed policies as needed
+      Tags:
+        - Key: appname
+          Value: !Ref AppName
+        - Key: uai
+          Value: !Ref UAI
+        - Key: env
+          Value: !Ref Env
+
+      ReadOnlyPolicy:
+        Type: AWS::IAM::ManagedPolicy
+        Properties:
+          ManagedPolicyName: !Sub '${UAI}-${AppName}-${Env}-ReadOnlyPolicy'
+          PolicyDocument:
+            Statement:
+              - Effect: Allow
+                Action:
+                  - s3:ListBucket
+                  - s3:GetObject
+                  - dynamodb:Scan
+                  - dynamodb:Query
+                Resource: '*'
+          Roles:
+            - !Ref IAMFedRole
+      WritePolicy:
+        Type: AWS::IAM::ManagedPolicy
+        Properties:
+          ManagedPolicyName: !Sub '${UAI}-${AppName}-${Env}-WritePolicy'
+          PolicyDocument:
+            Statement:
+              - Sid: lambdaaccesspolicy
+                Effect: Allow
+                Action:
+                  - lambda:InvokeFunction
+                Resource: '*'
+
+              - Sid: s3accesspolicy
+                Effect: Allow
+                Action:
+                  - s3:PutObject
+                  - s3:GetObject
+                  - s3:DeleteObject
+                Resource: '*' # Replace with specific bucket ARN if needed  
+
+              - Sid: dynamodbaccesspolicy
+                Effect: Allow
+                Action:
+                  - dynamodb:PutItem
+                  - dynamodb:GetItem
+                  - dynamodb:UpdateItem
+                  - dynamodb:DeleteItem
+                  - dynamodb:Scan
+                  - dynamodb:Query
+                Resource: '*' # Replace with specific table ARN if needed
+
+              - Sid: kmsaccesspolicy
+                Effect: Allow
+                Action:
+                  - kms:Decrypt
+                  - kms:Encrypt
+                  - kms:GenerateDataKey
+                Resource: '*' # Replace with specific KMS key ARN if needed
+
+outputs:
+  RoleName:
+    Description: Name of the created IAM Role
+    Value: !Ref IAMFedRole
+  RoleARN:
+    Description: ARN of the created IAM Role
+    Value: !GetAtt 
+      - IAMFedRole
+      - Arn

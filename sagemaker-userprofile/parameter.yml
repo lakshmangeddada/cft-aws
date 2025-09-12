@@ -1,0 +1,9 @@
+UAI: 1234567
+ENV: dev
+AppName: myapp
+StudioUserProfileName: myuserprofile
+DataScienceAppInstanceType: ml.t3.medium
+SageMakerDomainId: d-xxxxxxxxxx
+SageMakerSecurityGroupId: sg-xxxxxxxx
+SageMakerExecutionRoleArn: arn:aws:iam::123456789012:role/service-role/AmazonSageMaker-ExecutionRole-20200101T000001
+

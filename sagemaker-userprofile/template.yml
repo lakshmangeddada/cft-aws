@@ -1,0 +1,169 @@
+#create sagemaker user profile and jupyterapp with mappings of all regions.
+AWSTemplateFormatVersion: '2010-09-09'
+Description: 'Create sagemaker user profile and jupyterapp with mappings of all regions.'
+Parameters:
+  UAI:
+    Type: String
+    Description: 'Unique Alphanumeric Identifier'
+  ENV:
+    Type: String
+    Description: 'Environment Name'
+    AllowedValues:
+      - dev
+      - qa
+      - prd
+  AppName:
+    Type: String
+    Description: 'Application Name'     
+  StudioUserProfileName:
+    Type: String
+    Description: 'SageMaker Studio User Profile Name'
+  DataScienceAppInstanceType:
+    Type: String
+    Description: 'Instance Type for Data Science App'
+    AllowedValues:
+      - ml.t3.medium
+      - ml.t3.large
+      - ml.t3.xlarge  
+      - ml.t3.2xlarge
+
+  SageMakerDomainId:
+    Type: String
+    Description: 'SageMaker Domain ID'
+  SageMakerSecurityGroupId:
+    Type: String
+    Description: 'SageMaker Security Group ID'
+  SageMakerExecutionRoleArn:
+    Type: String
+    Description: 'SageMaker Execution Role ARN'
+    
+    Metadata:
+      'AWS::CloudFormation::Interface':
+        ParameterGroups:
+          - Label:
+              default: 'SageMaker User Profile specific Parameters'
+            Parameters:
+              - SageMakerDomainId
+              - SageMakerSecurityGroupId
+              - SageMakerExecutionRoleArn
+          
+          - Label1:
+              default: 'user settings Parameters'
+            Parameters:
+              - StartKernelGatewayApps
+              - StudioUserProfileName
+              - DataScienceAppInstanceType
+
+          - Label1:
+              default: 'Tagging Parameters'
+            Parameters:
+              - UAI
+              - ENV
+              - AppName
+        ParameterLabels:
+          UAI:
+            default: 'Unique Alphanumeric Identifier'
+          ENV:
+            default: 'Environment Name'
+          AppName:
+            default: 'Application Name'
+          StudioUserProfileName:
+            default: 'SageMaker Studio User Profile Name'
+          DataScienceAppInstanceType:
+            default: 'Instance Type for Data Science App'
+          SageMakerDomainId:
+            default: 'SageMaker Domain ID'
+          SageMakerSecurityGroupId:
+            default: 'SageMaker Security Group ID'
+          SageMakerExecutionRoleArn:
+            default: 'SageMaker Execution Role ARN'
+
+  Conditions:
+    GenerateProfileNameCondition: !Equals [!Ref StudioUserProfileName, '']
+    KernelGatewayAppsCondition: !Equals [!Ref StartKernelGatewayApps, 'YES']
+    NoKernelGatewayAppsCondition: !Equals [!Ref StartKernelGatewayApps, 'NO']
+
+  Mappings:
+    RegionMap:
+      us-east-1:
+        SageMakerAppImageConfigArn: arn:aws:sagemaker:us-east-1:081325390199:app-image-config/kernel-gateway-python-3-7
+      us-east-2:
+        SageMakerAppImageConfigArn: arn:aws:sagemaker:us-east-2:081325390199:app-image-config/kernel-gateway-python-3-7
+      us-west-1:
+        SageMakerAppImageConfigArn: arn:aws:sagemaker:us-west-1:081325390199:app-image-config/kernel-gateway-python-3-7
+      us-west-2:
+        SageMakerAppImageConfigArn: arn:aws:sagemaker:us-west-2:081325390199:app-image-config/kernel-gateway-python-3-7
+      af-south-1:
+        SageMakerAppImageConfigArn: arn:aws:sagemaker:af-south-1:081325390199:app-image-config/kernel-gateway-python-3-7
+      ap-east-1:
+        SageMakerAppImageConfigArn: arn:aws:sagemaker:ap-east-1:081325390199:app-image-config/kernel-gateway-python-3-7
+      ap-south-1:
+        SageMakerAppImageConfigArn: arn:aws:sagemaker:ap-south-1:081325390199:app-image-config/kernel-gateway-python-3-7
+      ap-northeast-3:
+        SageMakerAppImageConfigArn: arn:aws:sagemaker:ap-northeast-3:081325390199:app-image-config/kernel-gateway-python-3-7
+      ap-northeast-2:
+        SageMakerAppImageConfigArn: arn:aws:sagemaker:ap-northeast-2:081325390199:app-image-config/kernel-gateway-python-3-7
+      ap-southeast-1:
+        SageMakerAppImageConfigArn: arn:aws:sagemaker:ap-southeast-1:081325390199:app-image-config/kernel-gateway-python-3-7
+      ap-southeast-2:
+        SageMakerAppImageConfigArn: arn:aws:sagemaker:ap-southeast-2:081325390199:app-image-config/kernel-gateway-python-3-7
+      ap-northeast-1:
+        SageMakerAppImageConfigArn: arn:aws:sagemaker:ap-northeast-1:081325390199:app-image-config/kernel-gateway-python-3-7
+      ca-central-1:
+        SageMakerAppImageConfigArn: arn:aws:sagemaker:ca-central-1:081325390199:app-image-config/kernel-gateway-python-3-7
+      eu-central-1:
+        SageMakerAppImageConfigArn: arn:aws:sagemaker:eu-central-1:081325390199:app-image-config/kernel-gateway-python-3-7
+      eu-west-1:    
+        SageMakerAppImageConfigArn: arn:aws:sagemaker:eu-west-1:081325390199:app-image-config/kernel-gateway-python-3-7
+      eu-west-2:
+        SageMakerAppImageConfigArn: arn:aws:sagemaker:eu-west-2:081325390199:app-image-config/kernel-gateway-python-3-7
+      eu-west-3:
+        SageMakerAppImageConfigArn: arn:aws:sagemaker:eu-west-3:081325390199:app-image-config/kernel-gateway-python-3-7
+
+    Resources:
+      SageMakerUserProfile:
+        Type: 'AWS::SageMaker::UserProfile'
+        Properties:
+          DomainId: !Ref SageMakerDomainId
+          UserProfileName: !If 
+            - GenerateProfileNameCondition
+            - !Sub '${'AWS::Region'}-userprofile'
+            - !Ref StudioUserProfileName
+          UserSettings:
+            ExecutionRole: !Ref SageMakerExecutionRoleArn
+            SecurityGroups:
+              - !Ref SageMakerSecurityGroupId
+            SharingSettings:
+              NotebookOutputOption: 'Disabled'     
+        Tags:
+          - Key: UAI
+            Value: !Ref UAI
+          - Key: AppName
+            Value: !Ref AppName
+          - Key: Env
+            Value: !Ref ENV
+
+      JupyterApp:
+        Type: 'AWS::SageMaker::App'
+        DependsOn: SageMakerUserProfile
+        Properties:
+          AppType: JupyterServer
+          AppName: !Sub '${AppName}-${ENV}-jupyter-app'
+          DomainId: !Ref SageMakerDomainId
+          UserProfileName: !If 
+            - GenerateProfileNameCondition
+            - !Sub '${'AWS::Region'}-userprofile'
+            - !Ref StudioUserProfileName
+          ResourceSpec:
+            SageMakerImageArn: !FindInMap 
+              - RegionMap
+              - !Ref 'AWS::Region'
+              - SageMakerAppImageConfigArn
+            InstanceType: !Ref DataScienceAppInstanceType
+            Tags:
+              - Key: UAI
+                Value: !Ref UAI
+              - Key: AppName
+                Value: !Ref AppName
+              - Key: Env
+                Value: !Ref ENV

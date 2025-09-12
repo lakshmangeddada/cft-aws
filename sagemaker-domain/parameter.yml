@@ -1,0 +1,8 @@
+UAI: 1234567
+ENV: dev
+AppName: myapp
+NetworkAccessType: VPConly
+AuthMode: IAM
+SageMakerExecutionRole: <sagemaker execution role arn>
+KMSARN: <kms key arn>
+SageMakerSecurityGroup: <security group id>

@@ -1,0 +1,75 @@
+#Create a sagemaker domain with all the parameters reffering from paramter file
+AWSTemplateFormatVersion: '2010-09-09'
+Description: 'Create a sagemaker domain with all the parameters reffering from paramter file' 
+Parameters:
+  UAI:
+    Type: String
+    Description: 'Unique Alphanumeric Identifier'
+  ENV:
+    Type: String
+    Description: 'Environment Name'
+    AllowedValues:
+      - dev
+      - qa
+      - prd
+  AppName:
+    Type: String
+    Description: 'Application Name'
+  NetworkAccessType:
+    Type: String
+    Description: 'Network Access Type'
+    AllowedValues:
+      - PublicInternetOnly
+      - VPConly
+    Default: VPConly
+  AuthMode:
+    Type: String
+    Description: 'Authentication Mode'
+    AllowedValues:
+      - IAM
+      - SSO
+    Default: IAM
+  SageMakerExecutionRole:
+    Type: String
+    Description: 'SageMaker Execution Role ARN'
+  KMSARN:
+    Type: String
+    Description: 'KMS Key ARN for encrypting EFS volume'
+  SageMakerSecurityGroup:
+    Type: String
+    Description: 'Security Group ID for SageMaker Domain'
+
+Resources:
+  SageMakerDomain:
+    Type: 'AWS::SageMaker::Domain'
+    Properties:
+      DomainName: !Sub '${AppName}-${ENV}-sagemaker-domain'
+      AuthMode: !Ref AuthMode
+      DefaultUserSettings:
+        ExecutionRole: !Ref SageMakerExecutionRole
+        'SecurityGroups':
+          - !Ref SageMakerSecurityGroup
+      AppNetworkAccessType: !Ref NetworkAccessType
+      KmsKeyId: !Ref KMSARN
+      SubnetIds:
+        - !ImportValue PrivateSubnet1
+        - !ImportValue PrivateSubnet2
+      VpcId: !ImportValue VPCID
+      Tags:
+        - Key: UAI
+          Value: !Ref UAI
+        - Key: AppName
+          Value: !Ref AppName
+        - Key: Env
+          Value: !Ref ENV
+        - Key: Name
+          Value: !Sub '${AppName}-${ENV}-sagemaker-domain'
+      output:
+        DomainId:
+          Description: 'SageMaker Domain ID'
+          Value: !Ref SageMakerDomain
+        DomainName:
+          Description: 'SageMaker Domain Name'
+          Value: !GetAtt SageMakerDomain.DomainName
+        
+
